@@ -1,7 +1,0 @@
-I use the following to compile the binaries using g++:
-
-g++ main.cpp Line.cpp -static -o mmmtext
-
-FOR ONLINEGDB
-
-I have added a safe mode that allows the program to work with onlineGDB. Make your terminal window a little taller for best results, but otherwise it should work even though it does not fill the width of the console.

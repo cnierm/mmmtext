@@ -1,18 +1,18 @@
-# mmmtext
+# MMM Text
 A mini multi-modal text editor written in C++
 
-## features
+## Features
 - Minimal: less than 2000 lines of code and no 3rd party libraries.
 - Cross-platform: enjoy similar functionality in both Windows and Linux.
 - Keyboard-centric: with features like navigating with two command line cursors at once, mmmtext is built with the keyboard in mind.
-- Text wrapping
+- Text wrapping: lines too long for your window? No worries.
 
-## usage
+## Usage
 mmmtext is a command line tool for Windows and Linux (Mac is not supported, but may work). To open the editor, simply execute `mmmtext`.
 
 You may also pass a file in as an argument to open it on startup.
 
-### prompt / movement mode
+### Prompt / movement mode
 initially, you are able to type with most keys into the prompt box at the top. In this prompt, hit `?` at any time to get a help menu. The help menu is written below:
 ```
 HOW TO USE: 
@@ -27,8 +27,12 @@ In write mode:
 Use Arrow keys to move
 Press ESC twice to exit and autosave.
 ```
-### write mode
+### Write mode
 write mode is similar to insert mode from Vim. here you change the actual contents of the file you are working with.
 
 ## About
-The goal of this project was simply to make a text editor. Even simple editors like nano consist of over 10,000 lines of code as well as libraries that restrict it to certain platforms. WHile this editor is much smaller it is lacking in some features such as live window resizing and vertical navigation at this time.
+The goal of this project was simply to make a text editor. Even simple editors like nano consist of over 10,000 lines of code as well as libraries that restrict it to certain platforms. While this editor is much smaller it is lacking in some features such as live window resizing and vertical navigation at this time.
+
+I use the following to compile the binaries using g++:
+
+`g++ main.cpp Line.cpp -static -o mmmtext`
