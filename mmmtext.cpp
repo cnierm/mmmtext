@@ -35,6 +35,8 @@ int posY = 4;
 int posLine = 0; // Current index of the vector the cursor is looking at.
 int textPosX = 0;
 
+int startIndex = 0; // used for scrolling
+
 std::string activeFile = "";
 
 std::vector<Line> text; // This is the text document
@@ -113,7 +115,7 @@ void ClearLinesAndIndicators() {
 
     std::cout << "\x1b[s";
     SetCursorCoords(1, 4);
-    for (i = 3; i < termHeight; ++i) {
+    for (i = 3; i <= termHeight; ++i) {
         std::cout << std::string(termWidth, ' ') << SetCursorCoordsStr(1, i) << "\x1b[B";
     }
     std::cout << "\x1b[u";
@@ -151,8 +153,9 @@ void RenderAllLines(std::vector<Line> doc, int startIndex) {
 
     for (i = startIndex; i < doc.size(); ++i) {
         int lineHeight = doc.at(i).GetNumVisualLinesUsed();
-        if (heightUsed == termHeight - 3) return;             // If the height limit has been reached, terminate the function.
-        else if (heightUsed + lineHeight <= termHeight - 3) { // if we are not hitting the height limit by rendering next line
+        heightUsed += lineHeight;
+        if (heightUsed > termHeight - 3) break; // If the height limit has been reached, terminate the function.
+        else if (heightUsed <= termHeight - 3) { // if we are not hitting the height limit by rendering next line
             if (lineHeight == 1) {
                 std::cout << doc.at(i).GetLineData(); // Get whole line
                 ++posY; 
@@ -174,10 +177,10 @@ void RenderAllLines(std::vector<Line> doc, int startIndex) {
                 ++posY;
                 SetCursorCoords(3, posY);
             }
-            return;
+            break;
         }
     }
-    std::cout << "\x1b[u";
+    std::cout << "\x1b[u" << std::flush;
 }
 
 
@@ -204,7 +207,7 @@ void LoadPrompt() {
 void GetVisualFromText(int textX, int textY, int& visX, int& visY) {
     visY = 4; // Top of text window
     int i;
-    for (i = 0; i < textY; ++i) { // Gets us to the top of the text line were on
+    for (i = startIndex; i < textY; ++i) { // Gets us to the top of the text line were on
         visY += text.at(i).GetNumVisualLinesUsed();
     }
 
@@ -281,6 +284,30 @@ char CharAtPos() { // Get the character at the current text postition.
     }
 }
 
+void ScrollDownCheck() {
+    if (posY == termHeight) { 
+        ++startIndex;
+        //std::cout << "\x1b[u"; // free up cursor save state for rerender
+        ClearLinesAndIndicators();
+        RenderLineIndicators(text);
+        RenderAllLines(text, startIndex); 
+        //std::cout << "\x1b[s" << SetCursorCoordsStr(posX, posY); // restore cursor to text box
+
+    }
+}
+
+void ScrollUpCheck() {
+    if (posY == 4) { // 3 to account for prompt bar 
+        --startIndex;
+        //std::cout << "\x1b[u"; // free up cursor save state for rerender
+        ClearLinesAndIndicators();
+        RenderLineIndicators(text);
+        RenderAllLines(text, startIndex); 
+        //std::cout << "\x1b[s" << SetCursorCoordsStr(posX, posY); // restore cursor to text box
+
+    }
+}
+
 void PromptMode(std::string& input) { // TODO: When you press '?', put up a help window
     input.clear();
     int promptPosX = 5;
@@ -314,7 +341,7 @@ void PromptMode(std::string& input) { // TODO: When you press '?', put up a help
                 ClearScreen();
                 LoadPrompt();
                 RenderLineIndicators(text);
-                RenderAllLines(text, 0);
+                RenderAllLines(text, startIndex);
                 SetCursorCoords(promptPosX, 2);
                 std::cout << "\x1b[s" << SetCursorCoordsStr(posX, posY) << "\x1b[30m\x1b[47m"
                           << cursorChar << "\x1b[0m\x1b[u" << std::flush
@@ -334,8 +361,11 @@ void PromptMode(std::string& input) { // TODO: When you press '?', put up a help
                               << cursorChar << "\x1b[0m\x1b[u" << std::flush;
                 }
                 else if (posLine > 0) {
+                    //ScrollUpCheck();
                     std::cout << "\x1b[s" << SetCursorCoordsStr(posX, posY)
-                              << cursorChar;
+                              << cursorChar << "\x1b[u";
+                    ScrollUpCheck();
+                    std::cout << "\x1b[s";
                     --posLine;
                     textPosX = text.at(posLine).GetLineData().size();
                     GetVisualFromText(textPosX, posLine, posX, posY);
@@ -347,8 +377,10 @@ void PromptMode(std::string& input) { // TODO: When you press '?', put up a help
             }
             case 'j': {
                 if (posLine < text.size() - 1) {
+                    ScrollDownCheck();
                     std::cout << "\x1b[s" << SetCursorCoordsStr(posX, posY)
                               << cursorChar;
+                    
                     ++posLine;
 
                     if (textPosX > text.at(posLine).GetLineData().size()) {
@@ -357,6 +389,8 @@ void PromptMode(std::string& input) { // TODO: When you press '?', put up a help
                     }
 
                     GetVisualFromText(textPosX, posLine, posX, posY);
+
+                    //ScrollDownCheck();
                     cursorChar = CharAtPos(); // Update cursor character
                     std::cout << SetCursorCoordsStr(posX, posY) << "\x1b[30m\x1b[47m"
                               << cursorChar << "\x1b[0m\x1b[u" << std::flush;
@@ -366,8 +400,10 @@ void PromptMode(std::string& input) { // TODO: When you press '?', put up a help
 
             case 'k': {
                 if (posLine > 0) {
+                    ScrollUpCheck();
                     std::cout << "\x1b[s" << SetCursorCoordsStr(posX, posY)
                               << cursorChar;
+                    
                     --posLine;
 
                     if (textPosX > text.at(posLine).GetLineData().size()) {
@@ -376,6 +412,8 @@ void PromptMode(std::string& input) { // TODO: When you press '?', put up a help
                     }
 
                     GetVisualFromText(textPosX, posLine, posX, posY);
+
+                    // ScrollUpCheck();
                     cursorChar = CharAtPos(); // Update cursor character
                     std::cout << SetCursorCoordsStr(posX, posY) << "\x1b[30m\x1b[47m"
                               << cursorChar << "\x1b[0m\x1b[u" << std::flush;
@@ -395,8 +433,11 @@ void PromptMode(std::string& input) { // TODO: When you press '?', put up a help
                                   << cursorChar << "\x1b[0m\x1b[u" << std::flush;
                     }
                     else if (posLine < text.size() - 1) {
+                        
                         std::cout << "\x1b[s" << SetCursorCoordsStr(posX, posY)
-                                  << cursorChar;
+                                  << cursorChar << "\x1b[u";
+                        ScrollDownCheck();
+                        std::cout << "\x1b[s";
                         textPosX = 0;
                         ++posLine;
                         GetVisualFromText(textPosX, posLine, posX, posY);
@@ -478,8 +519,9 @@ void PromptMode(std::string& input) { // TODO: When you press '?', put up a help
 
         }
         // Debug
-        // std::cout << "\x1b[s" << SetCursorCoordsStr(termWidth - 12, 4) << "( " << posX << " , " << posY << " )  "
-        //           << SetCursorCoordsStr(termWidth - 12, 5) << "( " << textPosX << " , " << posLine << " )  \x1b[u"; 
+        std::cout << "\x1b[s" << SetCursorCoordsStr(termWidth - 12, 4) << "( " << posX << " , " << posY << " )  "
+                  << SetCursorCoordsStr(termWidth - 12, 5) << "( " << textPosX << " , " << posLine << " )  "
+                  << SetCursorCoordsStr(termWidth - 12, 6) << startIndex << "\x1b[u"; 
     }
 
 }
@@ -510,7 +552,7 @@ void WriteMode() {
                 SetCursorCoords(posX, posY);
                 ClearLinesAndIndicators();
                 RenderLineIndicators(text);
-                RenderAllLines(text, 0);
+                RenderAllLines(text, startIndex);
                 break;
             case 8: // Backspace
             case 127: {
@@ -522,7 +564,7 @@ void WriteMode() {
                     if (rerenderNeeded != 0) {
                         ClearLinesAndIndicators();
                         RenderLineIndicators(text);
-                        RenderAllLines(text, 0); // When scrolling is added, DELETE THE 0!!!
+                        RenderAllLines(text, startIndex); 
                         break;
                     }
                     ClearLine(posLine);
@@ -538,7 +580,7 @@ void WriteMode() {
                     SetCursorCoords(posX, posY);
                     ClearLinesAndIndicators();
                     RenderLineIndicators(text);
-                    RenderAllLines(text, 0);
+                    RenderAllLines(text, startIndex);
                 }
                 break;
             }
@@ -689,7 +731,7 @@ void WriteMode() {
                 if (rerenderNeeded != 0) {
                     ClearLinesAndIndicators();
                     RenderLineIndicators(text);
-                    RenderAllLines(text, 0); // When scrolling is added, DELETE THE 0!!!
+                    RenderAllLines(text, startIndex); 
                 }
                 else {
                     RenderLine(posLine);
@@ -706,7 +748,7 @@ void WriteMode() {
                 if (rerenderNeeded != 0) {
                     ClearLinesAndIndicators();
                     RenderLineIndicators(text);
-                    RenderAllLines(text, 0); // When scrolling is added, DELETE THE 0!!!
+                    RenderAllLines(text, startIndex); 
                 }
                 else {
                     RenderLine(posLine);
@@ -757,7 +799,7 @@ int main(int argc, char* argv[]) {
     }
 
     RenderLineIndicators(text);
-    RenderAllLines(text, 0);
+    RenderAllLines(text, startIndex);
 
 
 
@@ -787,7 +829,7 @@ int main(int argc, char* argv[]) {
             SaveFile(file);
             ClearLinesAndIndicators();
             RenderLineIndicators(text);
-            RenderAllLines(text, 0);
+            RenderAllLines(text, startIndex);
         }
         else if (input[0] == 'o') { // open
             ClearPrompt();
@@ -800,7 +842,7 @@ int main(int argc, char* argv[]) {
 
             ClearLinesAndIndicators();
             RenderLineIndicators(text);
-            RenderAllLines(text, 0);
+            RenderAllLines(text, startIndex);
 
 
         }
@@ -819,7 +861,7 @@ int main(int argc, char* argv[]) {
 
             ClearLinesAndIndicators();
             RenderLineIndicators(text);
-            RenderAllLines(text, 0);
+            RenderAllLines(text, startIndex);
             
         }
         else if (input[0] == 'q') { // quit

@@ -35,4 +35,4 @@ The goal of this project was simply to make a text editor. Even simple editors l
 
 I use the following to compile the binaries using g++:
 
-`g++ main.cpp Line.cpp -static -o mmmtext`
+`g++ mmmtext.cpp Line.cpp -static -o mmmtext`
