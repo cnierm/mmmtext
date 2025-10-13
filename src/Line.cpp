@@ -1,4 +1,4 @@
-#include "Line.hpp"
+#include "../include/Line.hpp"
 
 
 Line::Line() {

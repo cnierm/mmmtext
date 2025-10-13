@@ -13,16 +13,16 @@
 #include <iostream>
 #include <fstream>
 #include <string>
-#include "Line.hpp"
+#include "../include/Line.hpp"
 #include <vector>
 
 #ifdef _WIN32 // Runs platform-specific #includes and defines specific functions.
 
-#include "WindowsFunctions.hpp"
+#include "../include/WindowsFunctions.hpp"
 
 #else // Sets up for a unix-like OS (MacOS, Linux, BSD, onlineGDB, etc)
 
-#include "UnixFunctions.hpp"
+#include "../include/UnixFunctions.hpp"
 
 #endif
 
@@ -361,7 +361,6 @@ void PromptMode(std::string& input) { // TODO: When you press '?', put up a help
                               << cursorChar << "\x1b[0m\x1b[u" << std::flush;
                 }
                 else if (posLine > 0) {
-                    //ScrollUpCheck();
                     std::cout << "\x1b[s" << SetCursorCoordsStr(posX, posY)
                               << cursorChar << "\x1b[u";
                     ScrollUpCheck();
@@ -546,6 +545,7 @@ void WriteMode() {
             case 13:
                 text.insert(text.begin() + posLine + 1, text.at(posLine).GetLineData().substr(textPosX));
                 text.at(posLine) = Line(text.at(posLine).GetLineData().substr(0,textPosX));
+                ScrollDownCheck();
                 ++posLine;
                 textPosX = 0;
                 GetVisualFromText(textPosX, posLine, posX, posY);
@@ -575,6 +575,7 @@ void WriteMode() {
                     text.at(posLine - 1) = Line(text.at(posLine - 1).GetLineData() + 
                                                         text.at(posLine).GetLineData());
                     text.erase(text.begin() + posLine);
+                    ScrollUpCheck();
                     --posLine;
                     GetVisualFromText(textPosX, posLine, posX, posY);
                     SetCursorCoords(posX, posY);
@@ -591,6 +592,7 @@ void WriteMode() {
                     switch (arrowKeyUnix) {
                         case 'A': // Up
                             if (posLine > 0) {
+                                ScrollUpCheck();
                                 --posLine;
 
                                 if (textPosX > text.at(posLine).GetLineData().size()) {
@@ -605,6 +607,7 @@ void WriteMode() {
                             break;
                         case 'B': // Down
                             if (posLine < text.size() - 1) {
+                                ScrollDownCheck();
                                 ++posLine;
             
                                 if (textPosX > text.at(posLine).GetLineData().size()) {
@@ -626,6 +629,7 @@ void WriteMode() {
                                 SetCursorCoords(posX, posY);
                             }
                             else if (posLine < text.size() - 1) {
+                                ScrollDownCheck();
                                 textPosX = 0;
                                 ++posLine;
                                 GetVisualFromText(textPosX, posLine, posX, posY);
@@ -639,6 +643,7 @@ void WriteMode() {
                                 SetCursorCoords(posX, posY);
                             }
                             else if (posLine > 0) {
+                                ScrollUpCheck();
                                 --posLine;
                                 textPosX = text.at(posLine).GetLineData().size();
                                 GetVisualFromText(textPosX, posLine, posX, posY);
